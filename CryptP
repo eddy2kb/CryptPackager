@@ -1,0 +1,35 @@
+#!/usr/bin/python3
+
+import shutil
+import os
+from cryptography.fernet import Fernet
+import fire
+
+def pack(to_pkgfile):
+    newpkg = to_pkgfile+".tar"
+
+    key = Fernet.generate_key()
+
+    shutil.make_archive(to_pkgfile, format='tar', root_dir=to_pkgfile)
+
+    with open(newpkg, "rb") as file:
+        contents = file.read()
+    contents_encrypted = Fernet(key).encrypt(contents)
+    with open(newpkg.split(".")[0]+".cryptpkg", "wb") as file:
+        file.write(contents_encrypted+b'.'+key)
+    os.remove(newpkg)
+
+def unpack(to_pkgfile):
+    with open(to_pkgfile, "r") as file:
+        key = bytes(file.read().split(".")[1], "utf-8")
+
+    with open(to_pkgfile, "rb") as file:
+        contents = file.read()
+    contents_decrypted = Fernet(key).decrypt(contents)
+    with open(to_pkgfile.split(".")[0]+".tar", "wb") as file:
+        file.write(contents_decrypted)
+        shutil.unpack_archive(to_pkgfile.split(".")[0]+".tar", to_pkgfile.split(".")[0]+".unpackaged")
+    os.remove(to_pkgfile.split(".")[0]+".tar")
+
+if __name__ == '__main__':
+    fire.Fire()
